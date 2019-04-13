@@ -11,7 +11,7 @@
     "scripts": [
       "compat-data.js",
       "css-lexer.js",
-      "css-parser.js",
+      "css-tokenizer.js",
       "background.js"
     ]
   },
