@@ -1,0 +1,10 @@
+{
+  "name": "compat-icon",
+  "version": "0.0.1",
+  "scripts": {
+    "build-data": "node data/build-data.js"
+  },
+  "dependencies": {
+    "mdn-browser-compat-data": "0.0.75"
+  }
+}

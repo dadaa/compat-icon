@@ -1,0 +1,25 @@
+{
+  "manifest_version": 2,
+  "name": "compat-icon",
+  "version": "1.0",
+  "description": "",
+  "permissions": [
+    "<all_urls>",
+    "tabs"
+  ],
+  "background": {
+    "scripts": [
+      "compat-data.js",
+      "css-lexer.js",
+      "css-parser.js",
+      "background.js"
+    ]
+  },
+  "page_action": {
+    "default_icon": "images/icon.svg",
+    "default_title": "compat-icon"
+  },
+  "web_accessible_resources": [
+    "compat-data.json"
+  ]
+}
