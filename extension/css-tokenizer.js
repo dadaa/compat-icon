@@ -1,3 +1,24 @@
+const HAS_BLOCK = "HAS_BLOCK";
+const HAS_NO_BLOCK = "HAS_NO_BLOCK";
+const HAS_SUB_RULES = "HAS_SUB_RULES";
+
+const AT_RULES = {
+  "charset": HAS_NO_BLOCK,
+  "import": HAS_NO_BLOCK,
+  "namespace": HAS_NO_BLOCK,
+
+  "counter-style": HAS_BLOCK,
+  "font-face": HAS_BLOCK,
+  "page": HAS_BLOCK,
+  "viewport": HAS_BLOCK,
+
+  "document": HAS_SUB_RULES,
+  "font-feature-values": HAS_SUB_RULES,
+  "keyframes": HAS_SUB_RULES,
+  "media": HAS_SUB_RULES,
+  "supports": HAS_SUB_RULES,
+};
+
 class CSSTokenizer {
   constructor(input) {
     this.input = input;
@@ -5,27 +26,59 @@ class CSSTokenizer {
   }
 
   nextRule() {
-    const { tokens: selectorOrAtRuleTokens } = this._readUntil(["{"]);
-    if (!selectorOrAtRuleTokens) {
+    const firstToken = this._skipWhitespace();
+    if (!firstToken) {
       return null;
     }
 
-    const { atRuleName, atRuleKeywords, selectors } =
-      this._parseSelectorOrAtRule(selectorOrAtRuleTokens);
-
-    if (atRuleName === "keyframes" || atRuleName === "media") {
-      const childRules = [];
-      while (true) {
-        const childRule = this.nextRule();
-        if (!childRule) {
-          break;
-        }
-        childRules.push(childRule);
-      }
-      return { atRuleName, atRuleKeywords, childRules };
+    if (firstToken.text === "}") {
+      // end of rule block
+      return null;
     }
 
+    const atRuleName =
+      firstToken.tokenType === eCSSToken_AtKeyword ? firstToken.text : null;
+    if (!atRuleName) {
+      const { tokens } = this._readUntil(["{"]);
+      tokens.unshift(firstToken);
+      const selectors = this._toSplitString(tokens);
+      const declarations = this._getDeclarationBlock();
+      return { declarations, selectors };
+    }
+
+    const atRuleFeature = AT_RULES[atRuleName];
+    if (atRuleFeature === HAS_NO_BLOCK) {
+      const { tokens } = this._readUntil([";"]);
+      const atRuleKeywords = this._toSplitString(tokens);
+      return { atRuleName, atRuleKeywords };
+    }
+
+    // HAS_BLOCK or HAS_SUB_RULES case
+    const { tokens } = this._readUntil(["{"]);
+    const atRuleKeywords = this._toSplitString(tokens);
+
+    if (atRuleFeature === HAS_SUB_RULES) {
+      const subRules = [];
+      while (true) {
+        // Get nested sub rule.
+        const subRule = this.nextRule();
+        if (!subRule) {
+          break;
+        }
+        subRules.push(subRule);
+      }
+      return { atRuleName, atRuleKeywords, subRules };
+    }
+
+    // HAS_BLOCK case
+    // If we did not get the feature, try to get the block as default
+    const declarations = this._getDeclarationBlock();
+    return { atRuleName, atRuleKeywords, declarations };
+  }
+
+  _getDeclarationBlock() {
     const declarations = {};
+
     while (true) {
       const { tokens: propertyTokens } = this._readUntil([":", "}"]);
       const property = this._toString(propertyTokens);
@@ -42,8 +95,7 @@ class CSSTokenizer {
       }
     }
 
-    return atRuleName ? { atRuleName, atRuleKeywords, declarations}
-                      : { selectors, declarations };
+    return declarations;
   }
 
   _nextToken() {
@@ -61,27 +113,19 @@ class CSSTokenizer {
     }
   }
 
-  _parseSelectorOrAtRule(tokens) {
-    let firstToken = null;
-
+  _skipWhitespace(tokens) {
     while (true) {
-      const token = tokens.shift();
+      const token = this._nextToken();
+      if (!token) {
+        return null;
+      }
+
       if (token.tokenType !== eCSSToken_Whitespace) {
-        firstToken = token;
-        break;
+        return token;
       }
     }
 
-    const isAtRule = firstToken.tokenType === eCSSToken_AtKeyword;
-    if (isAtRule) {
-      return {
-        atRuleName: firstToken.text,
-        atRuleKeywords: this._toString(tokens).split(" "),
-      };
-    } else {
-      tokens.unshift(firstToken);
-      return { selectors: this._toString(tokens).split(" ") };
-    }
+    return null;
   }
 
   _readUntil(stopTexts) {
@@ -105,6 +149,10 @@ class CSSTokenizer {
 
     // Not found
     return {};
+  }
+
+  _toSplitString(tokens) {
+    return this._toString(tokens).split(/\s+/);
   }
 
   _toString(tokens) {
