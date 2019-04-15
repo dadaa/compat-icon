@@ -21,74 +21,70 @@ const AT_RULES = {
 
 class CSSTokenizer {
   constructor(input) {
-    this.input = input;
     this.lexer = getCSSLexer(input);
   }
 
-  nextRule() {
-    const firstToken = this._skipWhitespace();
+  nextRule(isSubRule = false) {
+    const firstToken = this._nextToken();
     if (!firstToken) {
       return null;
     }
 
     if (firstToken.text === "}") {
       // end of rule block
-      return null;
+      return isSubRule ? null : this.nextRule();
     }
 
     const atRuleName =
       firstToken.tokenType === eCSSToken_AtKeyword ? firstToken.text : null;
     if (!atRuleName) {
-      const { tokens } = this._readUntil(["{"]);
-      tokens.unshift(firstToken);
-      const selectors = this._toSplitString(tokens);
+      const { tokens: selectors } = this._readUntil(["{"], true);
+      selectors.unshift(firstToken);
       const declarations = this._getDeclarationBlock();
       return { declarations, selectors };
     }
 
     const atRuleFeature = AT_RULES[atRuleName];
     if (atRuleFeature === HAS_NO_BLOCK) {
-      const { tokens } = this._readUntil([";"]);
-      const atRuleKeywords = this._toSplitString(tokens);
-      return { atRuleName, atRuleKeywords };
+      const { tokens: atRuleQueries } = this._readUntil([";"]);
+      return { atRuleName, atRuleQueries };
     }
 
     // HAS_BLOCK or HAS_SUB_RULES case
-    const { tokens } = this._readUntil(["{"]);
-    const atRuleKeywords = this._toSplitString(tokens);
-
+    const { tokens: atRuleQueries } = this._readUntil(["{"]);
     if (atRuleFeature === HAS_SUB_RULES) {
       const subRules = [];
       while (true) {
         // Get nested sub rule.
-        const subRule = this.nextRule();
+        const subRule = this.nextRule(true);
         if (!subRule) {
           break;
         }
         subRules.push(subRule);
       }
-      return { atRuleName, atRuleKeywords, subRules };
+      return { atRuleName, atRuleQueries, subRules };
     }
 
     // HAS_BLOCK case
     // If we did not get the feature, try to get the block as default
     const declarations = this._getDeclarationBlock();
-    return { atRuleName, atRuleKeywords, declarations };
+    return { atRuleName, atRuleQueries, declarations };
   }
 
   _getDeclarationBlock() {
     const declarations = {};
 
     while (true) {
+      // end of declaration block
       const { tokens: propertyTokens } = this._readUntil([":", "}"]);
       const property = this._toString(propertyTokens);
       if (!property) {
         break;
       }
 
-      const { tokens: valueTokens, stopText } = this._readUntil([";", "}"]);
-      const value = this._toString(valueTokens);
-      declarations[property] = value;
+      // might be no ;
+      const { tokens: values, stopText } = this._readUntil([";", "}"]);
+      declarations[property] = values;
 
       if (stopText === "}") {
         break;
@@ -98,7 +94,7 @@ class CSSTokenizer {
     return declarations;
   }
 
-  _nextToken() {
+  _nextToken(isWhitespaceNeeded) {
     while (true) {
       const token = this.lexer.nextToken();
 
@@ -106,33 +102,19 @@ class CSSTokenizer {
         return null;
       }
 
-      // Skip comment
-      if (token.tokenType !== eCSSToken_Comment) {
+      // Skip comment and whitespace
+      if (token.tokenType !== eCSSToken_Comment &&
+          (isWhitespaceNeeded || token.tokenType !== eCSSToken_Whitespace)) {
         return token;
       }
     }
   }
 
-  _skipWhitespace(tokens) {
-    while (true) {
-      const token = this._nextToken();
-      if (!token) {
-        return null;
-      }
-
-      if (token.tokenType !== eCSSToken_Whitespace) {
-        return token;
-      }
-    }
-
-    return null;
-  }
-
-  _readUntil(stopTexts) {
+  _readUntil(stopTexts, isWhitespaceNeeded) {
     const tokens = [];
 
     while (true) {
-      const token = this._nextToken();
+      const token = this._nextToken(isWhitespaceNeeded);
 
       if (!token) {
         return {};
@@ -151,16 +133,12 @@ class CSSTokenizer {
     return {};
   }
 
-  _toSplitString(tokens) {
-    return this._toString(tokens).split(/\s+/);
-  }
-
   _toString(tokens) {
     if (!tokens || !tokens.length) {
       return "";
     }
     const first = tokens[0];
     const last = tokens[tokens.length - 1];
-    return this.input.substring(first.startOffset, last.endOffset).trim();
+    return this.lexer.mBuffer.substring(first.startOffset, last.endOffset).trim();
   }
 }
