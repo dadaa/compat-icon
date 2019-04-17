@@ -1,4 +1,4 @@
-extension/compat-data.json
+extension/compat-data.js
 package-lock.json
 node_modules
 .DS_Store

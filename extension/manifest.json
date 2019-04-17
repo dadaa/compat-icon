@@ -18,8 +18,5 @@
   "page_action": {
     "default_icon": "images/icon.svg",
     "default_title": "compat-icon"
-  },
-  "web_accessible_resources": [
-    "compat-data.json"
-  ]
+  }
 }

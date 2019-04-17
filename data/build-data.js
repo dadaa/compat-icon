@@ -7,14 +7,17 @@ const payload = {
   css: compatData.css
 }
 
+const content =
+  `function getCompatData() { return ${ JSON.stringify(payload) }; }`;
+
 fs.writeFile(
   path.resolve(
     __dirname,
     "..",
     "extension",
-    "compat-data.json"
+    "compat-data.js"
   ),
-  JSON.stringify(payload),
+  content,
   err => {
     if (err) {
       console.error(err)

@@ -24,6 +24,92 @@ class CSSTokenizer {
     this.lexer = getCSSLexer(input);
   }
 
+  nextChunk() {
+    let { tokens, stopText } = this._readUntil([";", "{", "}"]);
+    if (!tokens) {
+      return null;
+    }
+
+    tokens = this._trim(tokens);
+    if (!tokens.length) {
+      return this.nextChunk();
+    }
+
+    return this._parse(tokens, stopText) || { unknown: tokens };
+  }
+
+  _unknown(tokens) {
+    return { unknown: tokens };
+  }
+
+  _parse(tokens, stopText) {
+    switch (stopText) {
+      case ";": {
+        return this._parseAtRule(tokens) || this._parseProperty(tokens);
+      }
+      case "{": {
+        return this._parseAtRule(tokens) || this._parseSelector(tokens);
+      }
+      case "}": {
+        return this._parseProperty(tokens);
+      }
+    }
+    return null;
+  }
+
+  _parseAtRule(tokens) {
+    if (tokens[0].tokenType !== eCSSToken_AtKeyword) {
+      return null;
+    }
+
+    const atrule = tokens.shift();
+    const queries = tokens;
+    return { atrule, queries };
+  }
+
+  _parseSelector(tokens) {
+    return { selectors: tokens };
+  }
+
+  _parseProperty(tokens) {
+    if (tokens.length < 3) {
+      return null;
+    }
+
+    if (tokens[0].text === ":" || tokens[1].text !== ":") {
+      return null;
+    }
+
+    const property = tokens.shift();
+    tokens.shift(); // :
+    const values = this._trim(tokens);
+    return { property, values };
+  }
+
+  _trim(tokens) {
+    if (!tokens || !tokens.length) {
+      return [];
+    }
+
+    while (true) {
+      if (tokens.length && tokens[0].tokenType === eCSSToken_Whitespace) {
+        tokens.shift();
+      } else {
+        break;
+      }
+    }
+
+    while (true) {
+      if (tokens.length && tokens[tokens.length - 1].tokenType === eCSSToken_Whitespace) {
+        tokens.pop();
+      } else {
+        break;
+      }
+    }
+
+    return tokens;
+  }
+
   nextRule(isSubRule = false) {
     const firstToken = this._nextToken();
     if (!firstToken) {
@@ -94,7 +180,7 @@ class CSSTokenizer {
     return declarations;
   }
 
-  _nextToken(isWhitespaceNeeded) {
+  _nextToken() {
     while (true) {
       const token = this.lexer.nextToken();
 
@@ -103,18 +189,17 @@ class CSSTokenizer {
       }
 
       // Skip comment and whitespace
-      if (token.tokenType !== eCSSToken_Comment &&
-          (isWhitespaceNeeded || token.tokenType !== eCSSToken_Whitespace)) {
+      if (token.tokenType !== eCSSToken_Comment) {
         return token;
       }
     }
   }
 
-  _readUntil(stopTexts, isWhitespaceNeeded) {
+  _readUntil(stopTexts) {
     const tokens = [];
 
     while (true) {
-      const token = this._nextToken(isWhitespaceNeeded);
+      const token = this._nextToken();
 
       if (!token) {
         return {};
