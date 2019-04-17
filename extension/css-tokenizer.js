@@ -110,76 +110,6 @@ class CSSTokenizer {
     return tokens;
   }
 
-  nextRule(isSubRule = false) {
-    const firstToken = this._nextToken();
-    if (!firstToken) {
-      return null;
-    }
-
-    if (firstToken.text === "}") {
-      // end of rule block
-      return isSubRule ? null : this.nextRule();
-    }
-
-    const atRuleName =
-      firstToken.tokenType === eCSSToken_AtKeyword ? firstToken.text : null;
-    if (!atRuleName) {
-      const { tokens: selectors } = this._readUntil(["{"], true);
-      selectors.unshift(firstToken);
-      const declarations = this._getDeclarationBlock();
-      return { declarations, selectors };
-    }
-
-    const atRuleFeature = AT_RULES[atRuleName];
-    if (atRuleFeature === HAS_NO_BLOCK) {
-      const { tokens: atRuleQueries } = this._readUntil([";"]);
-      return { atRuleName, atRuleQueries };
-    }
-
-    // HAS_BLOCK or HAS_SUB_RULES case
-    const { tokens: atRuleQueries } = this._readUntil(["{"]);
-    if (atRuleFeature === HAS_SUB_RULES) {
-      const subRules = [];
-      while (true) {
-        // Get nested sub rule.
-        const subRule = this.nextRule(true);
-        if (!subRule) {
-          break;
-        }
-        subRules.push(subRule);
-      }
-      return { atRuleName, atRuleQueries, subRules };
-    }
-
-    // HAS_BLOCK case
-    // If we did not get the feature, try to get the block as default
-    const declarations = this._getDeclarationBlock();
-    return { atRuleName, atRuleQueries, declarations };
-  }
-
-  _getDeclarationBlock() {
-    const declarations = {};
-
-    while (true) {
-      // end of declaration block
-      const { tokens: propertyTokens } = this._readUntil([":", "}"]);
-      const property = this._toString(propertyTokens);
-      if (!property) {
-        break;
-      }
-
-      // might be no ;
-      const { tokens: values, stopText } = this._readUntil([";", "}"]);
-      declarations[property] = values;
-
-      if (stopText === "}") {
-        break;
-      }
-    }
-
-    return declarations;
-  }
-
   _nextToken() {
     while (true) {
       const token = this.lexer.nextToken();
@@ -216,14 +146,5 @@ class CSSTokenizer {
 
     // Not found
     return {};
-  }
-
-  _toString(tokens) {
-    if (!tokens || !tokens.length) {
-      return "";
-    }
-    const first = tokens[0];
-    const last = tokens[tokens.length - 1];
-    return this.lexer.mBuffer.substring(first.startOffset, last.endOffset).trim();
   }
 }
