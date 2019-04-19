@@ -17,7 +17,8 @@
   },
   "page_action": {
     "default_icon": "images/icon.svg",
-    "default_title": "compat-icon"
+    "default_title": "Compatiblity Icon",
+    "show_matches": ["file://*/*", "http://*/*", "https://*/*"]
   },
   "web_accessible_resources": [
     "images/error.svg",
