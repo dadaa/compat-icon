@@ -52,7 +52,7 @@ class Background {
                          r.support !== SUPPORT_STATE.UNKNOWN)
             .length;
     const compatibilityRatio = compatibleCount / result.length;
-    const title = `Compatibiliti Ratio: ${ (compatibilityRatio * 100).toFixed(2) }%`;
+    const title = `Compatibility Ratio: ${ (compatibilityRatio * 100).toFixed(2) }%`;
     browser.pageAction.setTitle({ tabId, title });
 
     // Update icon
