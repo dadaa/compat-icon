@@ -76,12 +76,15 @@ class CSSTokenizer {
       return null;
     }
 
-    if (tokens[0].text === ":" || tokens[1].text !== ":") {
+    if (tokens[0].text === ":" || (tokens[1].text !== ":" && tokens[2].text !== ":")) {
       return null;
     }
 
     const property = tokens.shift();
-    tokens.shift(); // :
+    // Skip till ":"
+    if (tokens.shift().tokenType === eCSSToken_Whitespace) {
+      tokens.shift();
+    }
     const values = this._trim(tokens);
     return { property, values };
   }

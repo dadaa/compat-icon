@@ -3,28 +3,96 @@
 const COMPAT_DATA_URL = browser.runtime.getURL("compat-data.json");
 const CONTENT_SCRIPT = "/content.js";
 
+const SUPPORT_STATE = {
+  SUPPORTED: "SUPPORTED",
+  UNSUPPORTED: "UNSUPPORTED",
+  UNKNOWN: "UNKNOWN",
+};
+
+const ICON_SIZE = 16;
+const ICONS = {
+  error: {
+    url: "images/error.svg",
+    color: "#d70022",
+  },
+  ok: {
+    url: "images/ok.svg",
+    color: "#12bc00",
+  },
+  warning: {
+    url: "images/warning.svg",
+    color: "#be9b00",
+  },
+};
+
 class Background {
+  constructor() {
+    this.compatData = getCompatData();
+  }
+
   async _update(tabId) {
+    const result = [];
+
     await browser.tabs.executeScript(tabId, { file: CONTENT_SCRIPT,
                                               runAt: "document_idle" });
     const styleSheets = await browser.tabs.sendMessage(tabId, {});
     for (const styleSheet of styleSheets) {
-      await this._analyze(styleSheet);
+      try {
+        const r = await this._analyze(styleSheet);
+        result.push(...r);
+      } catch (e) {
+        console.error(
+          `Could not analyze ${ styleSheet.text || styleSheet.href } [${ e.message }]`);
+      }
     }
+
+    // Update title
+    const compatibleCount =
+      result.filter(r => r.support !== SUPPORT_STATE.UNSUPPORTED &&
+                         r.support !== SUPPORT_STATE.UNKNOWN)
+            .length;
+    const compatibilityRatio = compatibleCount / result.length;
+    const title = `Compatibiliti Ratio: ${ (compatibilityRatio * 100).toFixed(2) }%`;
+    browser.pageAction.setTitle({ tabId, title });
+
+    // Update icon
+    const iconIndentity =
+      compatibilityRatio > 0.9 ? "ok" : compatibilityRatio > 0.6 ? "warning" : "error";
+    const iconData = ICONS[iconIndentity];
+    const iconImage = new Image();
+    await new Promise(resolve => {
+      iconImage.onload = resolve;
+      iconImage.src = browser.runtime.getURL(iconData.url);
+    });
+    const canvas = document.createElement("canvas");
+    canvas.setAttribute("width", ICON_SIZE);
+    canvas.setAttribute("height", ICON_SIZE);
+    const context = canvas.getContext("2d");
+    context.drawImage(iconImage, 0, 0, ICON_SIZE, ICON_SIZE);
+    context.globalCompositeOperation = "source-in";
+    context.fillStyle = iconData.color;
+    context.fillRect(0, 0, ICON_SIZE, ICON_SIZE);
+    browser.pageAction.setIcon({
+      tabId,
+      path: {
+        [ICON_SIZE]: canvas.toDataURL(),
+      },
+    });
   }
 
   async _analyze(styleSheet) {
-    const targetBrowser = "firefox";
-    const targetBrowserVersion = "68";
+    const targetBrowser = {
+      name: "firefox",
+      version: "5",
+    }
 
-    const cssCompatData = getCompatData().css; // from compat-data.js
+    const cssCompatData = this.compatData.css;
     const content = styleSheet.text || await this._fetch(styleSheet.href);
     const cssTokenizer = new CSSTokenizer(content);
 
     const result = [];
 
-    let currentCompatData;
-    let type;
+    let parent;
     for (;;) {
       const chunk = cssTokenizer.nextChunk();
       if (!chunk) {
@@ -32,31 +100,61 @@ class Background {
       }
 
       if (chunk.atrule) {
-        const atrule = chunk.atrule.text;
-        const atruleCompatData = cssCompatData["at-rules"];
-        const support = this.getSupport(atruleCompatData, targetBrowser, atrule);
-        result.push({ atrule, support });
-        currentCompatData = atruleCompatData[atrule];
-        type = "atrule";
+        parent = chunk;
       } else if (chunk.selectors) {
-        currentCompatData = cssCompatData["properties"];
-        type = "css";
+        parent = chunk;
       } else if (chunk.property) {
-        const property = chunk.property.text;
-        const support = this.getSupport(currentCompatData, targetBrowser, property);
-        result.push({ type, property, support });
+        if (!parent) {
+          console.warn("No parent for this property:"+chunk.property.text);
+          continue;
+        }
+
+        const isInCSSDeclarationBlock = parent.selectors ||
+                                        parent.atrule.text === "media" ||
+                                        parent.atrule.text === "page";
+
+        if (isInCSSDeclarationBlock) {
+          const compatData = cssCompatData.properties;
+          const property = chunk.property.text;
+          const support = this.getSupport(targetBrowser, property, compatData);
+          result.push({ property, support });
+        }
+      } else if (chunk.unknown) {
+        console.warn(chunk);
       }
     }
 
-    console.log(result);
+    return result;
   }
 
-  getSupport(compatData, browser, value) {
-    return compatData &&
-           compatData[value] &&
-           compatData[value].__compat
-             ? compatData[value].__compat.support[browser]
-             : false;
+  getSupport(browser, value, compatData) {
+    if (!compatData[value] || !compatData[value].__compat) {
+      return SUPPORT_STATE.UNKNOWN;
+    }
+
+    const browserVersion = parseFloat(browser.version);
+    const supportStates = compatData[value].__compat.support[browser.name] || [];
+    for (const state of Array.isArray(supportStates) ? supportStates : [supportStates]) {
+      // Ignore things that have prefix or flags
+      if (state.prefix || state.flags) {
+        continue;
+      }
+
+      const addedVersion = this.asFloatVersion(state.version_added);
+      const removedVersion = this.asFloatVersion(state.version_removed);
+      if (addedVersion <= browserVersion && browserVersion < removedVersion) {
+        return SUPPORT_STATE.SUPPORTED;
+      }
+    }
+
+    return SUPPORT_STATE.UNSUPPORTED;
+  }
+
+  asFloatVersion(version = false) {
+    if (version === true) {
+      return 0;
+    }
+    return version === false ? Number.MAX_VALUE : parseFloat(version);
   }
 
   async _fetch(href) {

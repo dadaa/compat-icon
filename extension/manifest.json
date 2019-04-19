@@ -18,5 +18,10 @@
   "page_action": {
     "default_icon": "images/icon.svg",
     "default_title": "compat-icon"
-  }
+  },
+  "web_accessible_resources": [
+    "images/error.svg",
+    "images/ok.svg",
+    "images/warning.svg"
+  ]
 }
