@@ -26,10 +26,6 @@ const ICONS = {
 };
 
 class Background {
-  constructor() {
-    this.compatData = getCompatData();
-  }
-
   async _update(tabId) {
     const result = [];
 
@@ -52,7 +48,8 @@ class Background {
                          r.support !== SUPPORT_STATE.UNKNOWN)
             .length;
     const compatibilityRatio = compatibleCount / result.length;
-    const title = `Compatibility Ratio: ${ (compatibilityRatio * 100).toFixed(2) }%`;
+    const title = `Compatibility Ratio: ${ (compatibilityRatio * 100).toFixed(2) }% ` +
+                  `(${ this._targetBrowser.brandName } ${ this._targetBrowser.version })`;
     browser.pageAction.setTitle({ tabId, title });
 
     // Update icon
@@ -81,11 +78,6 @@ class Background {
   }
 
   async _analyze(styleSheet) {
-    const targetBrowser = {
-      name: "firefox",
-      version: "5",
-    }
-
     const cssCompatData = this.compatData.css;
     const content = styleSheet.text || await this._fetch(styleSheet.href);
     const cssTokenizer = new CSSTokenizer(content);
@@ -116,7 +108,7 @@ class Background {
         if (isInCSSDeclarationBlock) {
           const compatData = cssCompatData.properties;
           const property = chunk.property.text;
-          const support = this.getSupport(targetBrowser, property, compatData);
+          const support = this.getSupport(this._targetBrowser, property, compatData);
           result.push({ property, support });
         }
       } else if (chunk.unknown) {
@@ -162,7 +154,26 @@ class Background {
     return result.text();
   }
 
-  start() {
+  async _updateTargetBrowser(targetBrowser) {
+    this._targetBrowser = targetBrowser;
+
+    const tabs = await browser.tabs.query({ currentWindow: true, active: true });
+    if (tabs.length !== 1) {
+      return;
+    }
+    this._update(tabs[0].id);
+  }
+
+  async start() {
+    this.compatData = getCompatData();
+    this._targetBrowser = await getCurrentBrowser();
+
+    browser.runtime.onConnect.addListener(port => {
+      port.onMessage.addListener(targetBrowser => {
+        this._updateTargetBrowser(targetBrowser);
+      });
+    });
+
     browser.tabs.onActivated.addListener(({ tabId }) => {
       this._update(tabId);
     });
