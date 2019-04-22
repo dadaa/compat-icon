@@ -93,6 +93,12 @@ class Background {
         if (isInCSSDeclarationBlock) {
           const compatData = cssCompatData.properties;
           const property = chunk.property.text;
+
+          if (property.startsWith("--")) {
+            // Ignore CSS variable
+            continue;
+          }
+
           for (const browser of this._targetBrowsers) {
             const support = this._getSupport(browser, property, compatData);
             result.push({ browser, property, support });
