@@ -13,15 +13,12 @@ const ICON_SIZE = 16;
 const ICONS = {
   error: {
     url: "images/error.svg",
-    color: "#d70022",
   },
   ok: {
     url: "images/ok.svg",
-    color: "#12bc00",
   },
   warning: {
     url: "images/warning.svg",
-    color: "#be9b00",
   },
 };
 
@@ -55,25 +52,14 @@ class Background {
     const iconIndentity =
       compatibilityRatio > 0.9 ? "ok" : compatibilityRatio > 0.6 ? "warning" : "error";
     const iconData = ICONS[iconIndentity];
-    const iconImage = new Image();
-    await new Promise(resolve => {
-      iconImage.onload = resolve;
-      iconImage.src = browser.runtime.getURL(iconData.url);
-    });
-    const canvas = document.createElement("canvas");
-    canvas.setAttribute("width", ICON_SIZE);
-    canvas.setAttribute("height", ICON_SIZE);
-    const context = canvas.getContext("2d");
-    context.drawImage(iconImage, 0, 0, ICON_SIZE, ICON_SIZE);
-    context.globalCompositeOperation = "source-in";
-    context.fillStyle = iconData.color;
-    context.fillRect(0, 0, ICON_SIZE, ICON_SIZE);
     browser.pageAction.setIcon({
       tabId,
       path: {
-        [ICON_SIZE]: canvas.toDataURL(),
+        [ICON_SIZE]: browser.runtime.getURL(iconData.url),
       },
     });
+
+    this.result = result;
   }
 
   async _analyze(styleSheet) {
@@ -175,6 +161,11 @@ class Background {
   async start() {
     this._compatData = getCompatData();
     this._targetBrowsers = this._getTargetBrowsers();
+
+    browser.runtime.onConnect.addListener(port => {
+      // Send result to the popup.
+      port.postMessage(this.result);
+    });
 
     browser.tabs.onActivated.addListener(({ tabId }) => {
       this._update(tabId);
