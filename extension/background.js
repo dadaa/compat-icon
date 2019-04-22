@@ -118,12 +118,31 @@ class Background {
   }
 
   _getSupport(browser, value, compatData) {
-    if (!compatData[value] || !compatData[value].__compat) {
+    if (!compatData[value]) {
       return SUPPORT_STATE.UNKNOWN;
     }
 
+    switch (value) {
+      case "align-content":
+      case "align-items":
+      case "align-self":
+      case "justify-content":
+      case "justify-items":
+      case "justify-self": {
+        compatData = compatData[value].flex_context;
+        break;
+      }
+      default: {
+        if (!compatData[value].__compat) {
+          return SUPPORT_STATE.UNKNOWN;
+        }
+
+        compatData = compatData[value];
+      }
+    }
+
     const browserVersion = parseFloat(browser.version);
-    const supportStates = compatData[value].__compat.support[browser.name] || [];
+    const supportStates = compatData.__compat.support[browser.name] || [];
     for (const state of Array.isArray(supportStates) ? supportStates : [supportStates]) {
       // Ignore things that have prefix or flags
       if (state.prefix || state.flags) {
