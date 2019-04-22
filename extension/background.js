@@ -48,8 +48,7 @@ class Background {
                          r.support !== SUPPORT_STATE.UNKNOWN)
             .length;
     const compatibilityRatio = compatibleCount / result.length;
-    const title = `Compatibility Ratio: ${ (compatibilityRatio * 100).toFixed(2) }% ` +
-                  `(${ this._targetBrowser.brandName } ${ this._targetBrowser.version })`;
+    const title = `Compatibility Ratio: ${ (compatibilityRatio * 100).toFixed(2) }%`;
     browser.pageAction.setTitle({ tabId, title });
 
     // Update icon
@@ -108,8 +107,10 @@ class Background {
         if (isInCSSDeclarationBlock) {
           const compatData = cssCompatData.properties;
           const property = chunk.property.text;
-          const support = this._getSupport(this._targetBrowser, property, compatData);
-          result.push({ property, support });
+          for (const browser of this._targetBrowsers) {
+            const support = this._getSupport(browser, property, compatData);
+            result.push({ browser, property, support });
+          }
         }
       } else if (chunk.unknown) {
         console.warn(chunk);
@@ -142,6 +143,23 @@ class Background {
     return SUPPORT_STATE.UNSUPPORTED;
   }
 
+  _getTargetBrowsers() {
+    const targetBrowsers = [];
+
+    for (const name of ["firefox", "chrome", "safari", "edge"]) {
+      const browser = this._compatData.browsers[name];
+      const brandName = browser.name;
+      for (const version in browser.releases) {
+        const { status } = browser.releases[version];
+        if (status === "current" || status === "beta" || status === "nightly") {
+          targetBrowsers.push({ name, brandName, status, version });
+        }
+      }
+    }
+
+    return targetBrowsers;
+  }
+
   _asFloatVersion(version = false) {
     if (version === true) {
       return 0;
@@ -156,7 +174,7 @@ class Background {
 
   async start() {
     this._compatData = getCompatData();
-    this._targetBrowser = await getCurrentBrowser();
+    this._targetBrowsers = this._getTargetBrowsers();
 
     browser.tabs.onActivated.addListener(({ tabId }) => {
       this._update(tabId);

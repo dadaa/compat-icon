@@ -12,7 +12,6 @@
       "compat-data.js",
       "css-lexer.js",
       "css-tokenizer.js",
-      "current-browser.js",
       "background.js"
     ]
   },
