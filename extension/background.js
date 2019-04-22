@@ -78,7 +78,7 @@ class Background {
   }
 
   async _analyze(styleSheet) {
-    const cssCompatData = this.compatData.css;
+    const cssCompatData = this._compatData.css;
     const content = styleSheet.text || await this._fetch(styleSheet.href);
     const cssTokenizer = new CSSTokenizer(content);
 
@@ -108,7 +108,7 @@ class Background {
         if (isInCSSDeclarationBlock) {
           const compatData = cssCompatData.properties;
           const property = chunk.property.text;
-          const support = this.getSupport(this._targetBrowser, property, compatData);
+          const support = this._getSupport(this._targetBrowser, property, compatData);
           result.push({ property, support });
         }
       } else if (chunk.unknown) {
@@ -119,7 +119,7 @@ class Background {
     return result;
   }
 
-  getSupport(browser, value, compatData) {
+  _getSupport(browser, value, compatData) {
     if (!compatData[value] || !compatData[value].__compat) {
       return SUPPORT_STATE.UNKNOWN;
     }
@@ -132,8 +132,8 @@ class Background {
         continue;
       }
 
-      const addedVersion = this.asFloatVersion(state.version_added);
-      const removedVersion = this.asFloatVersion(state.version_removed);
+      const addedVersion = this._asFloatVersion(state.version_added);
+      const removedVersion = this._asFloatVersion(state.version_removed);
       if (addedVersion <= browserVersion && browserVersion < removedVersion) {
         return SUPPORT_STATE.SUPPORTED;
       }
@@ -142,7 +142,7 @@ class Background {
     return SUPPORT_STATE.UNSUPPORTED;
   }
 
-  asFloatVersion(version = false) {
+  _asFloatVersion(version = false) {
     if (version === true) {
       return 0;
     }
@@ -155,7 +155,7 @@ class Background {
   }
 
   async start() {
-    this.compatData = getCompatData();
+    this._compatData = getCompatData();
     this._targetBrowser = await getCurrentBrowser();
 
     browser.tabs.onActivated.addListener(({ tabId }) => {
