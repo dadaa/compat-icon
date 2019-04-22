@@ -154,25 +154,9 @@ class Background {
     return result.text();
   }
 
-  async _updateTargetBrowser(targetBrowser) {
-    this._targetBrowser = targetBrowser;
-
-    const tabs = await browser.tabs.query({ currentWindow: true, active: true });
-    if (tabs.length !== 1) {
-      return;
-    }
-    this._update(tabs[0].id);
-  }
-
   async start() {
     this.compatData = getCompatData();
     this._targetBrowser = await getCurrentBrowser();
-
-    browser.runtime.onConnect.addListener(port => {
-      port.onMessage.addListener(targetBrowser => {
-        this._updateTargetBrowser(targetBrowser);
-      });
-    });
 
     browser.tabs.onActivated.addListener(({ tabId }) => {
       this._update(tabId);
