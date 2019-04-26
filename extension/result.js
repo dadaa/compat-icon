@@ -6,9 +6,8 @@ const SUPPORT_STATE = {
 };
 
 class Result {
-  constructor(result) {
+  constructor() {
     this._onClick = this._onClick.bind(this);
-    this._buildUI(result);
   }
 
   _createKey(issue) {
@@ -29,11 +28,11 @@ class Result {
 
     const { browserName, browserVersion } = target.dataset;
     const browser =
-      [...this._classified.keys()].find(b => b.name === browserName &&
-                                             b.version === browserVersion);
+      [...this._result.keys()].find(b => b.name === browserName &&
+                                         b.version === browserVersion);
     const issues =
-      this._classified.get(browser).filter(r => r.support === SUPPORT_STATE.UNSUPPORTED ||
-                                                r.support === SUPPORT_STATE.UNKNOWN);
+      this._result.get(browser).filter(r => r.support === SUPPORT_STATE.UNSUPPORTED ||
+                                            r.support === SUPPORT_STATE.UNKNOWN);
 
     const issuesMap = new Map();
     for (const issue of issues) {
@@ -58,21 +57,11 @@ class Result {
     browserEl.appendChild(issuesEl);
   }
 
-  _buildUI(result) {
-    const classified = new Map();
-
-    // Classify by browser type
-    for (const { browser, property, support } of result) {
-      if (!classified.has(browser)) {
-        classified.set(browser, []);
-      }
-      classified.get(browser).push({ property, support });
-    }
-
+  build(result) {
     const browsersEl = document.getElementById("browsers");
 
-    for (const browser of classified.keys()) {
-      const records = classified.get(browser);
+    for (const browser of result.keys()) {
+      const records = result.get(browser);
       const compatibleCount =
         records.filter(r => r.support !== SUPPORT_STATE.UNSUPPORTED &&
                             r.support !== SUPPORT_STATE.UNKNOWN)
@@ -104,13 +93,14 @@ class Result {
       headerEl.addEventListener("click", this._onClick);
     }
 
-    this._classified = classified;
+    this._result = result;
   }
 }
 
 document.addEventListener("DOMContentLoaded", () => {
   const port = browser.runtime.connect();
-  port.onMessage.addListener(result => {
-    new Result(result);
+  port.onMessage.addListener(r => {
+    const result = new Result();
+    result.build(r);
   });
 });

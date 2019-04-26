@@ -24,33 +24,63 @@ const ICONS = {
 
 class Background {
   async _update(tabId) {
-    const result = [];
+    if (this._targetBrowsers.length === 0) {
+      browser.pageAction.setTitle({ tabId, title: "No target browsers" });
+      browser.pageAction.setIcon({
+        tabId,
+        path: {
+          [ICON_SIZE]: browser.runtime.getURL("images/icon.svg"),
+        },
+      });
+      this._result = [];
+      return;
+    }
+
+    const result = new Map();
 
     await browser.tabs.executeScript(tabId, { file: CONTENT_SCRIPT,
                                               runAt: "document_idle" });
     const styleSheets = await browser.tabs.sendMessage(tabId, {});
     for (const styleSheet of styleSheets) {
       try {
-        const r = await this._analyze(styleSheet);
-        result.push(...r);
+        for (const { browser, property, support } of (await this._analyze(styleSheet))) {
+          if (!result.has(browser)) {
+            result.set(browser, []);
+          }
+          result.get(browser).push({ property, support });
+        }
       } catch (e) {
         console.error(
           `Could not analyze ${ styleSheet.text || styleSheet.href } [${ e.message }]`);
       }
     }
 
-    // Update title
-    const compatibleCount =
-      result.filter(r => r.support !== SUPPORT_STATE.UNSUPPORTED &&
-                         r.support !== SUPPORT_STATE.UNKNOWN)
-            .length;
-    const compatibilityRatio = compatibleCount / result.length;
-    const title = `Compatibility Ratio: ${ (compatibilityRatio * 100).toFixed(2) }%`;
+    // Find worst performing browser
+    let targetBrowser;
+    let targetCompatibilityRatio = Number.MAX_VALUE;
+    for (const browser of result.keys()) {
+      const records = result.get(browser);
+      const compatibleCount =
+        records.filter(r => r.support !== SUPPORT_STATE.UNSUPPORTED &&
+                            r.support !== SUPPORT_STATE.UNKNOWN)
+               .length;
+      const compatibilityRatio = compatibleCount / records.length;
+      if (compatibilityRatio < targetCompatibilityRatio) {
+        targetBrowser = browser;
+        targetCompatibilityRatio = compatibilityRatio;
+      }
+    }
+
+    const title = "Lowest compatibility browser: " +
+                  `${ targetBrowser.brandName } ${ targetBrowser.version } ` +
+                  ` (${ (targetCompatibilityRatio * 100).toFixed(2) }%)`;
     browser.pageAction.setTitle({ tabId, title });
 
-    // Update icon
-    const iconIndentity =
-      compatibilityRatio > 0.9 ? "ok" : compatibilityRatio > 0.6 ? "warning" : "error";
+    const iconIndentity = targetCompatibilityRatio > 0.9
+                            ? "ok"
+                            : targetCompatibilityRatio > 0.6
+                              ? "warning"
+                              : "error";
     const iconData = ICONS[iconIndentity];
     browser.pageAction.setIcon({
       tabId,
@@ -59,7 +89,7 @@ class Background {
       },
     });
 
-    this.result = result;
+    this._result = result;
   }
 
   async _analyze(styleSheet) {
@@ -199,7 +229,7 @@ class Background {
 
     browser.runtime.onConnect.addListener(port => {
       // Send result to the popup.
-      port.postMessage(this.result);
+      port.postMessage(this._result);
     });
 
     browser.tabs.onActivated.addListener(({ tabId }) => {
