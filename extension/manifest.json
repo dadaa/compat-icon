@@ -5,6 +5,7 @@
   "description": "",
   "permissions": [
     "<all_urls>",
+    "storage",
     "tabs"
   ],
   "background": {
@@ -14,6 +15,9 @@
       "css-tokenizer.js",
       "background.js"
     ]
+  },
+  "options_ui": {
+    "page": "options.html"
   },
   "page_action": {
     "default_icon": "images/icon.svg",

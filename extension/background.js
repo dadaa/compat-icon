@@ -159,7 +159,7 @@ class Background {
     return SUPPORT_STATE.UNSUPPORTED;
   }
 
-  _getTargetBrowsers() {
+  _getDefaultTargetBrowsers() {
     const targetBrowsers = [];
 
     for (const name of ["firefox", "chrome", "safari", "edge"]) {
@@ -176,6 +176,11 @@ class Background {
     return targetBrowsers;
   }
 
+  async _updateTargetBrowsers() {
+    const { targetBrowsers } = await browser.storage.local.get("targetBrowsers");
+    this._targetBrowsers = targetBrowsers || this._getDefaultTargetBrowsers();
+  }
+
   _asFloatVersion(version = false) {
     if (version === true) {
       return 0;
@@ -190,7 +195,7 @@ class Background {
 
   async start() {
     this._compatData = getCompatData();
-    this._targetBrowsers = this._getTargetBrowsers();
+    await this._updateTargetBrowsers();
 
     browser.runtime.onConnect.addListener(port => {
       // Send result to the popup.
@@ -212,6 +217,12 @@ class Background {
       }
 
       this._update(tabId);
+    });
+
+    browser.storage.onChanged.addListener(async (changes, area) => {
+      if (area === "local") {
+        await this._updateTargetBrowsers();
+      }
     });
   }
 }
