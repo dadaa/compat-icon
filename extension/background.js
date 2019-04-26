@@ -13,15 +13,12 @@ const ICON_SIZE = 16;
 const ICONS = {
   error: {
     url: "images/error.svg",
-    color: "#d70022",
   },
   ok: {
     url: "images/ok.svg",
-    color: "#12bc00",
   },
   warning: {
     url: "images/warning.svg",
-    color: "#be9b00",
   },
 };
 
@@ -48,37 +45,25 @@ class Background {
                          r.support !== SUPPORT_STATE.UNKNOWN)
             .length;
     const compatibilityRatio = compatibleCount / result.length;
-    const title = `Compatibility Ratio: ${ (compatibilityRatio * 100).toFixed(2) }% ` +
-                  `(${ this._targetBrowser.brandName } ${ this._targetBrowser.version })`;
+    const title = `Compatibility Ratio: ${ (compatibilityRatio * 100).toFixed(2) }%`;
     browser.pageAction.setTitle({ tabId, title });
 
     // Update icon
     const iconIndentity =
       compatibilityRatio > 0.9 ? "ok" : compatibilityRatio > 0.6 ? "warning" : "error";
     const iconData = ICONS[iconIndentity];
-    const iconImage = new Image();
-    await new Promise(resolve => {
-      iconImage.onload = resolve;
-      iconImage.src = browser.runtime.getURL(iconData.url);
-    });
-    const canvas = document.createElement("canvas");
-    canvas.setAttribute("width", ICON_SIZE);
-    canvas.setAttribute("height", ICON_SIZE);
-    const context = canvas.getContext("2d");
-    context.drawImage(iconImage, 0, 0, ICON_SIZE, ICON_SIZE);
-    context.globalCompositeOperation = "source-in";
-    context.fillStyle = iconData.color;
-    context.fillRect(0, 0, ICON_SIZE, ICON_SIZE);
     browser.pageAction.setIcon({
       tabId,
       path: {
-        [ICON_SIZE]: canvas.toDataURL(),
+        [ICON_SIZE]: browser.runtime.getURL(iconData.url),
       },
     });
+
+    this.result = result;
   }
 
   async _analyze(styleSheet) {
-    const cssCompatData = this.compatData.css;
+    const cssCompatData = this._compatData.css;
     const content = styleSheet.text || await this._fetch(styleSheet.href);
     const cssTokenizer = new CSSTokenizer(content);
 
@@ -108,8 +93,21 @@ class Background {
         if (isInCSSDeclarationBlock) {
           const compatData = cssCompatData.properties;
           const property = chunk.property.text;
-          const support = this.getSupport(this._targetBrowser, property, compatData);
-          result.push({ property, support });
+
+          if (property.startsWith("--")) {
+            // Ignore CSS variable
+            continue;
+          }
+
+          if (property === ("*")) {
+            // Ignore all
+            continue;
+          }
+
+          for (const browser of this._targetBrowsers) {
+            const support = this._getSupport(browser, property, compatData);
+            result.push({ browser, property, support });
+          }
         }
       } else if (chunk.unknown) {
         console.warn(chunk);
@@ -119,21 +117,40 @@ class Background {
     return result;
   }
 
-  getSupport(browser, value, compatData) {
-    if (!compatData[value] || !compatData[value].__compat) {
+  _getSupport(browser, value, compatData) {
+    if (!compatData[value]) {
       return SUPPORT_STATE.UNKNOWN;
     }
 
+    switch (value) {
+      case "align-content":
+      case "align-items":
+      case "align-self":
+      case "justify-content":
+      case "justify-items":
+      case "justify-self": {
+        compatData = compatData[value].flex_context;
+        break;
+      }
+      default: {
+        if (!compatData[value].__compat) {
+          return SUPPORT_STATE.UNKNOWN;
+        }
+
+        compatData = compatData[value];
+      }
+    }
+
     const browserVersion = parseFloat(browser.version);
-    const supportStates = compatData[value].__compat.support[browser.name] || [];
+    const supportStates = compatData.__compat.support[browser.name] || [];
     for (const state of Array.isArray(supportStates) ? supportStates : [supportStates]) {
       // Ignore things that have prefix or flags
       if (state.prefix || state.flags) {
         continue;
       }
 
-      const addedVersion = this.asFloatVersion(state.version_added);
-      const removedVersion = this.asFloatVersion(state.version_removed);
+      const addedVersion = this._asFloatVersion(state.version_added);
+      const removedVersion = this._asFloatVersion(state.version_removed);
       if (addedVersion <= browserVersion && browserVersion < removedVersion) {
         return SUPPORT_STATE.SUPPORTED;
       }
@@ -142,7 +159,24 @@ class Background {
     return SUPPORT_STATE.UNSUPPORTED;
   }
 
-  asFloatVersion(version = false) {
+  _getTargetBrowsers() {
+    const targetBrowsers = [];
+
+    for (const name of ["firefox", "chrome", "safari", "edge"]) {
+      const browser = this._compatData.browsers[name];
+      const brandName = browser.name;
+      for (const version in browser.releases) {
+        const { status } = browser.releases[version];
+        if (status === "current" || status === "beta" || status === "nightly") {
+          targetBrowsers.push({ name, brandName, status, version });
+        }
+      }
+    }
+
+    return targetBrowsers;
+  }
+
+  _asFloatVersion(version = false) {
     if (version === true) {
       return 0;
     }
@@ -154,24 +188,13 @@ class Background {
     return result.text();
   }
 
-  async _updateTargetBrowser(targetBrowser) {
-    this._targetBrowser = targetBrowser;
-
-    const tabs = await browser.tabs.query({ currentWindow: true, active: true });
-    if (tabs.length !== 1) {
-      return;
-    }
-    this._update(tabs[0].id);
-  }
-
   async start() {
-    this.compatData = getCompatData();
-    this._targetBrowser = await getCurrentBrowser();
+    this._compatData = getCompatData();
+    this._targetBrowsers = this._getTargetBrowsers();
 
     browser.runtime.onConnect.addListener(port => {
-      port.onMessage.addListener(targetBrowser => {
-        this._updateTargetBrowser(targetBrowser);
-      });
+      // Send result to the popup.
+      port.postMessage(this.result);
     });
 
     browser.tabs.onActivated.addListener(({ tabId }) => {

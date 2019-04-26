@@ -1,0 +1,75 @@
+<!doctype html>
+
+<html>
+  <head>
+    <meta charset="utf-8">
+    <script src="result.js"></script>
+    <style>
+    html {
+      font: message-box;
+    }
+
+    body {
+      color: #0c0c0d;
+      font-size: 13px;
+      font-weight: 400;
+      line-height: 1.8;
+      background: #f9f9fa;
+    }
+
+    #browsers {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    .browser {
+      min-height: 20px;
+    }
+
+    .header {
+      cursor: pointer;
+      display: grid;
+      grid-column-gap: 4px;
+      grid-template-columns: 16px 136px 56px 100px;
+      align-items: center;
+      min-height: 20px;
+    }
+
+    .header * {
+      pointer-events: none;
+    }
+
+    .header::before {
+      content: "";
+      background-size: contain;
+      background-repeat: no-repeat;
+      width: 16px;
+      height: 16px;
+    }
+
+    .header.ok::before {
+      background-image: url(images/ok.svg);
+    }
+
+    .header.error::before {
+      background-image: url(images/error.svg);
+    }
+
+    .header.warning::before {
+      background-image: url(images/warning.svg);
+    }
+
+    .issue a {
+      color: #0a8dff;
+      text-decoration: none;
+    }
+    </style>
+  </head>
+  <body>
+    <main>
+      <ul id="browsers">
+      </ul>
+    </main>
+  </body>
+</html>

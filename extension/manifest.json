@@ -12,13 +12,12 @@
       "compat-data.js",
       "css-lexer.js",
       "css-tokenizer.js",
-      "current-browser.js",
       "background.js"
     ]
   },
   "page_action": {
     "default_icon": "images/icon.svg",
-    "default_popup": "browser-selector.html",
+    "default_popup": "result.html",
     "default_title": "Compatiblity Icon",
     "show_matches": ["file://*/*", "http://*/*", "https://*/*"]
   },
