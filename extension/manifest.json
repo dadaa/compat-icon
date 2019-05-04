@@ -16,6 +16,16 @@
       "background.js"
     ]
   },
+  "experiment_apis": {
+    "styleEditor": {
+      "schema": "experiments/style-editor/schema.json",
+      "parent": {
+        "scopes": ["addon_parent"],
+        "script": "experiments/style-editor/api.js",
+        "paths": [["experiments", "styleEditor"]]
+      }
+    }
+  },
   "options_ui": {
     "page": "options.html"
   },

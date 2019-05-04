@@ -144,6 +144,9 @@ class CSSTokenizer {
         }
       }
 
+      token.lineNumber = this.lexer.lineNumber;
+      token.columnNumber = this.lexer.columnNumber;
+
       tokens.push(token);
     }
 
