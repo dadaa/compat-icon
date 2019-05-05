@@ -36,6 +36,8 @@
     "show_matches": ["file://*/*", "http://*/*", "https://*/*"]
   },
   "web_accessible_resources": [
+    "images/arrowhead-left.svg",
+    "images/arrowhead-right.svg",
     "images/error.svg",
     "images/ok.svg",
     "images/warning.svg"
