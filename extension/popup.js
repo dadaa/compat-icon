@@ -5,7 +5,7 @@ const SUPPORT_STATE = {
   UNKNOWN: "UNKNOWN",
 };
 
-class Result {
+class Popup {
   constructor() {
     this._onClickBrowser = this._onClickBrowser.bind(this);
     this._onClickIssueCategory = this._onClickIssueCategory.bind(this);
@@ -151,7 +151,7 @@ class Result {
 document.addEventListener("DOMContentLoaded", () => {
   const port = browser.runtime.connect();
   port.onMessage.addListener(r => {
-    const result = new Result();
-    result.build(r);
+    const popup = new Popup();
+    popup.build(r);
   });
 });

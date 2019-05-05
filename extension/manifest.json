@@ -31,7 +31,7 @@
   },
   "page_action": {
     "default_icon": "images/icon.svg",
-    "default_popup": "result.html",
+    "default_popup": "popup.html",
     "default_title": "Compatiblity Icon",
     "show_matches": ["file://*/*", "http://*/*", "https://*/*"]
   },
