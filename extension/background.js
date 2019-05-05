@@ -43,11 +43,13 @@ class Background {
     const styleSheets = await browser.tabs.sendMessage(tabId, {});
     for (const styleSheet of styleSheets) {
       try {
-        for (const { browser, property, support } of (await this._analyze(styleSheet))) {
+        for (const { browser, property, support, lineNumber, columnNumber }
+               of (await this._analyze(styleSheet))) {
           if (!result.has(browser)) {
             result.set(browser, []);
           }
-          result.get(browser).push({ property, support });
+          result.get(browser).push(
+            { property, support, styleSheet, lineNumber, columnNumber });
         }
       } catch (e) {
         console.error(
@@ -134,9 +136,10 @@ class Background {
             continue;
           }
 
+          const { lineNumber, columnNumber } = chunk.property;
           for (const browser of this._targetBrowsers) {
             const support = this._getSupport(browser, property, compatData);
-            result.push({ browser, property, support });
+            result.push({ browser, property, support, lineNumber, columnNumber });
           }
         }
       } else if (chunk.unknown) {

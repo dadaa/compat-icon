@@ -8,7 +8,7 @@ browser.runtime.onMessage.addListener(async () => {
     if (styleSheet.href) {
       styleSheets.push({ href: styleSheet.href });
     } else {
-      styleSheets.push({ text: styleSheet.ownerNode.textContent });
+      styleSheets.push({ text: styleSheet.ownerNode.textContent, index: i });
     }
   }
 
