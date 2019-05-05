@@ -31,12 +31,15 @@
   },
   "page_action": {
     "default_icon": "images/icon.svg",
-    "default_popup": "result.html",
+    "default_popup": "popup.html",
     "default_title": "Compatiblity Icon",
     "show_matches": ["file://*/*", "http://*/*", "https://*/*"]
   },
   "web_accessible_resources": [
+    "images/arrowhead-left.svg",
+    "images/arrowhead-right.svg",
     "images/error.svg",
+    "images/help.svg",
     "images/ok.svg",
     "images/warning.svg"
   ]
