@@ -28,26 +28,26 @@ section {
 header {
   align-items: center;
   padding-block: 4px;
-  padding-inline-start: 4px;
+  padding-inline: 4px;
   border-bottom: 1px solid #d7d7db;
   font-size: 13px;
   font-weight: 600;
   height: 40px;
   display: grid;
-  grid-template-columns: 32px 1fr;
+  grid-template-columns: 32px 1fr 16px 8px;
 }
 
-header a {
+header .previous {
   grid-column: 1;
   grid-row: 1;
   padding: 8px;
 }
 
-header a:hover {
+header .previous:hover {
   background-color: #d7d7db;
 }
 
-header a img {
+header .previous img {
   width: 16px;
   height: 16px;
 }
@@ -57,6 +57,16 @@ header label {
   text-align: center;
   grid-column: 1 / -1;
   grid-row: 1;
+}
+
+header .link {
+  grid-column: 3;
+  grid-row: 1;
+}
+
+header .link img {
+  width: 100%;
+  height: 100%;
 }
 
 ul {

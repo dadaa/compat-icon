@@ -2,7 +2,7 @@ class ListPanel {
   constructor(parentEl) {
     this._parentEl = parentEl;
     this._parentViews = [];
-    this._onClickHeader = this._onClickHeader.bind(this);
+    this._onClickPrevious = this._onClickPrevious.bind(this);
   }
 
   async update(header, items) {
@@ -10,16 +10,30 @@ class ListPanel {
 
     if (header) {
       const headerEl = document.createElement("header");
-      const clickableEl = document.createElement("a");
+      const previousEl = document.createElement("a");
+      previousEl.classList.add("previous");
       const imgEl = document.createElement("img");
       imgEl.src = "images/arrowhead-left.svg";
-      clickableEl.appendChild(imgEl);
+      previousEl.appendChild(imgEl);
+      previousEl.addEventListener("click", this._onClickPrevious);
+      headerEl.appendChild(previousEl);
+
       const labelEl = document.createElement("label");
-      labelEl.textContent = header;
-      headerEl.appendChild(clickableEl);
+      labelEl.textContent = header.text;
       headerEl.appendChild(labelEl);
+
+      if (header.link) {
+        const linkEl = document.createElement("a");
+        linkEl.classList.add("link");
+        linkEl.href = header.link;
+        linkEl.title = header.link;
+        const imgEl = document.createElement("img");
+        imgEl.src = "images/help.svg";
+        linkEl.appendChild(imgEl);
+        headerEl.appendChild(linkEl);
+      }
+
       sectionEl.appendChild(headerEl);
-      clickableEl.addEventListener("click", this._onClickHeader);
     }
 
     const ulEl = document.createElement("ul");
@@ -67,7 +81,7 @@ class ListPanel {
     this._parentViews.push(sectionEl);
   }
 
-  async _onClickHeader() {
+  async _onClickPrevious() {
     const currentView = this._parentViews.pop();
     const parentView = this._parentViews[this._parentViews.length - 1];
     parentView.style.visibility = "unset";

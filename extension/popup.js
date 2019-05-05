@@ -36,7 +36,9 @@ class Popup {
         labels: [`${ property } (${ issues.length })`],
       });
     }
-    const header = `${ browser.brandName } ${ browser.version }`;
+    const header = {
+      text: `${ browser.brandName } ${ browser.version }`,
+    };
     this._listComponent.update(header, items);
   }
 
@@ -60,7 +62,11 @@ class Popup {
         ],
       });
     }
-    this._listComponent.update(property, items);
+    const header = {
+      text: property,
+      link: `https://developer.mozilla.org/docs/Web/CSS/${ property }`,
+    };
+    this._listComponent.update(header, items);
   }
 
   async _onClickIssue({ issue }) {
