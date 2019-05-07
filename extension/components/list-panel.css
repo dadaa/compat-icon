@@ -91,12 +91,12 @@ li:hover {
   min-height: 28px;
 }
 
-.browser {
+.runtime {
   grid-column-gap: 8px;
   grid-template-columns: 16px 72px 48px 1fr 12px;
 }
 
-.browser img {
+.runtime img {
   width: 100%;
   height: 100%;
 }

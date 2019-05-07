@@ -4,24 +4,24 @@ class Options {
   }
 
   async onClick() {
-    const targetBrowsers = [];
+    const targetRuntimes = [];
     for (const inputEl of document.querySelectorAll("input:checked")) {
       const {
-        browserName: name,
-        browserBrandName: brandName,
-        browserVersion: version,
-        browserStatus: status
+        runtimeName: name,
+        runtimeBrandName: brandName,
+        runtimeVersion: version,
+        runtimeStatus: status
       } = inputEl.dataset;
-      targetBrowsers.push({ name, brandName, version, status });
+      targetRuntimes.push({ name, brandName, version, status });
     }
-    await browser.storage.local.set({ targetBrowsers });
+    await browser.storage.local.set({ targetRuntimes });
   }
 
   async build() {
-    const browsersEl = document.getElementById("browsers");
-    const browsers = getCompatData().browsers;
+    const runtimesEl = document.getElementById("runtimes");
+    const runtimes = getCompatData().browsers;
     for (const name of ["firefox", "chrome", "safari", "edge"]) {
-      const { name: brandName, releases } = browsers[name];
+      const { name: brandName, releases } = runtimes[name];
 
       const fieldsetEl = document.createElement("fieldset");
       const legendEl = document.createElement("legend");
@@ -42,10 +42,10 @@ class Options {
 
         inputEl.type = "checkbox";
         inputEl.id = id;
-        inputEl.dataset.browserName = name;
-        inputEl.dataset.browserBrandName = brandName;
-        inputEl.dataset.browserVersion = version;
-        inputEl.dataset.browserStatus = status;
+        inputEl.dataset.runtimeName = name;
+        inputEl.dataset.runtimeBrandName = brandName;
+        inputEl.dataset.runtimeVersion = version;
+        inputEl.dataset.runtimeStatus = status;
         labelEl.setAttribute("for", id);
         labelEl.textContent = `${ version } (${ status })`;
 
@@ -58,12 +58,12 @@ class Options {
 
       fieldsetEl.appendChild(legendEl);
       fieldsetEl.appendChild(ulEl);
-      browsersEl.appendChild(fieldsetEl);
+      runtimesEl.appendChild(fieldsetEl);
     }
 
-    const { targetBrowsers } = await browser.storage.local.get("targetBrowsers");
-    if (targetBrowsers) {
-      for (const { name, version } of targetBrowsers) {
+    const { targetRuntimes } = await browser.storage.local.get("targetRuntimes");
+    if (targetRuntimes) {
+      for (const { name, version } of targetRuntimes) {
         const id = this.info2id(name, version);
         const inputEl = document.getElementById(id);
         inputEl.checked = true;

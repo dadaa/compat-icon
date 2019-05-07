@@ -7,14 +7,14 @@ const SUPPORT_STATE = {
 
 class Popup {
   constructor() {
-    this._onClickBrowser = this._onClickBrowser.bind(this);
+    this._onClickRuntime = this._onClickRuntime.bind(this);
     this._onClickProperty = this._onClickProperty.bind(this);
     this._onClickIssue = this._onClickIssue.bind(this);
   }
 
-  _onClickBrowser({ browserObject, issuesInBrowser }) {
+  _onClickRuntime({ runtime, issuesInRuntime }) {
     const issuesMap = new Map();
-    for (const issue of issuesInBrowser) {
+    for (const issue of issuesInRuntime) {
       const property = issue.property;
       if (!issuesMap.has(property)) {
         issuesMap.set(property, []);
@@ -37,7 +37,7 @@ class Popup {
       });
     }
     const header = {
-      text: `${ browserObject.brandName } ${ browserObject.version }`,
+      text: `${ runtime.brandName } ${ runtime.version }`,
     };
     this._listComponent.update(header, items);
   }
@@ -79,23 +79,23 @@ class Popup {
     this._listComponent = new ListPanel(document.querySelector("main"));
 
     const items = [];
-    for (const { browser: browserObject, issues: issuesInBrowser, total } of result) {
+    for (const { runtime, issues: issuesInRuntime, total } of result) {
       const { compatibilityRatio, status } =
-        this.getCompatibility(issuesInBrowser, total);
+        this.getCompatibility(issuesInRuntime, total);
 
       items.push({
-        className: "browser",
+        className: "runtime",
         dataset: {
-          browserObject,
-          issuesInBrowser,
+          runtime,
+          issuesInRuntime,
         },
-        onClick: this._onClickBrowser,
+        onClick: this._onClickRuntime,
         hasChild: true,
         icon: `images/${ status }.svg`,
         labels: [
-          `${ browserObject.brandName } ${ browserObject.version }`,
+          `${ runtime.brandName } ${ runtime.version }`,
           `${ (compatibilityRatio * 100).toFixed(2) }%`,
-          `(${ issuesInBrowser.length } issues)`,
+          `(${ issuesInRuntime.length } issues)`,
         ],
       });
     }

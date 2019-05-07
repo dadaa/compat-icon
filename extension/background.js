@@ -24,7 +24,7 @@ const ICONS = {
 
 class Background {
   async _update(tabId) {
-    if (this._targetBrowsers.length === 0) {
+    if (this._targetRuntimes.length === 0) {
       browser.pageAction.setTitle({ tabId, title: "No target browsers" });
       browser.pageAction.setIcon({
         tabId,
@@ -42,21 +42,14 @@ class Background {
     const styleSheets = await browser.tabs.sendMessage(tabId, {});
     for (const styleSheet of styleSheets) {
       try {
-        for (const { browser: browserObject,
-                     property,
-                     support,
-                     lineNumber,
-                     columnNumber } of (await this._analyze(styleSheet))) {
+        for (const { runtime, property, support, lineNumber, columnNumber }
+               of (await this._analyze(styleSheet))) {
 
-          if (!issueMap.has(browserObject)) {
-            issueMap.set(browserObject, {
-              browser: browserObject,
-              issues: [],
-              total: 0,
-            });
+          if (!issueMap.has(runtime)) {
+            issueMap.set(runtime, { runtime, issues: [], total: 0 });
           }
 
-          const summary = issueMap.get(browserObject);
+          const summary = issueMap.get(runtime);
           summary.total += 1;
           if (support !== SUPPORT_STATE.SUPPORTED) {
             summary.issues.push(
@@ -71,19 +64,19 @@ class Background {
 
     const result = [...issueMap.values()];
 
-    // Find worst performing browser
-    let targetBrowser;
+    // Find worst performing runtime
+    let targetRuntime;
     let targetCompatibilityRatio = Number.MAX_VALUE;
-    for (const { browser: browserObject, issues, total } of result) {
+    for (const { runtime, issues, total } of result) {
       const ratio = (total - issues.length) / total;
       if (ratio < targetCompatibilityRatio) {
-        targetBrowser = browserObject;
+        targetRuntime = runtime;
         targetCompatibilityRatio = ratio;
       }
     }
 
-    const title = "Lowest compatibility browser: " +
-                  `${ targetBrowser.brandName } ${ targetBrowser.version } ` +
+    const title = "Lowest compatibility runtime: " +
+                  `${ targetRuntime.brandName } ${ targetRuntime.version } ` +
                   ` (${ (targetCompatibilityRatio * 100).toFixed(2) }%)`;
     browser.pageAction.setTitle({ tabId, title });
 
@@ -146,9 +139,9 @@ class Background {
           }
 
           const { lineNumber, columnNumber } = chunk.property;
-          for (const browser of this._targetBrowsers) {
-            const support = this._getSupport(browser, property, compatData);
-            result.push({ browser, property, support, lineNumber, columnNumber });
+          for (const runtime of this._targetRuntimes) {
+            const support = this._getSupport(runtime, property, compatData);
+            result.push({ runtime, property, support, lineNumber, columnNumber });
           }
         }
       } else if (chunk.unknown) {
@@ -159,7 +152,7 @@ class Background {
     return result;
   }
 
-  _getSupport(browser, value, compatData) {
+  _getSupport(runtime, value, compatData) {
     if (!compatData[value]) {
       return SUPPORT_STATE.UNKNOWN;
     }
@@ -183,8 +176,8 @@ class Background {
       }
     }
 
-    const browserVersion = parseFloat(browser.version);
-    const supportStates = compatData.__compat.support[browser.name] || [];
+    const runtimeVersion = parseFloat(runtime.version);
+    const supportStates = compatData.__compat.support[runtime.name] || [];
     for (const state of Array.isArray(supportStates) ? supportStates : [supportStates]) {
       // Ignore things that have prefix or flags
       if (state.prefix || state.flags) {
@@ -193,7 +186,7 @@ class Background {
 
       const addedVersion = this._asFloatVersion(state.version_added);
       const removedVersion = this._asFloatVersion(state.version_removed);
-      if (addedVersion <= browserVersion && browserVersion < removedVersion) {
+      if (addedVersion <= runtimeVersion && runtimeVersion < removedVersion) {
         return SUPPORT_STATE.SUPPORTED;
       }
     }
@@ -201,26 +194,26 @@ class Background {
     return SUPPORT_STATE.UNSUPPORTED;
   }
 
-  _getDefaultTargetBrowsers() {
-    const targetBrowsers = [];
+  _getDefaultTargetRuntimes() {
+    const targetRuntimes = [];
 
     for (const name of ["firefox", "chrome", "safari", "edge"]) {
-      const browser = this._compatData.browsers[name];
-      const brandName = browser.name;
-      for (const version in browser.releases) {
-        const { status } = browser.releases[version];
+      const runtime = this._compatData.browsers[name];
+      const brandName = runtime.name;
+      for (const version in runtime.releases) {
+        const { status } = runtime.releases[version];
         if (status === "current" || status === "beta" || status === "nightly") {
-          targetBrowsers.push({ name, brandName, status, version });
+          targetRuntimes.push({ name, brandName, status, version });
         }
       }
     }
 
-    return targetBrowsers;
+    return targetRuntimes;
   }
 
-  async _updateTargetBrowsers() {
-    const { targetBrowsers } = await browser.storage.local.get("targetBrowsers");
-    this._targetBrowsers = targetBrowsers || this._getDefaultTargetBrowsers();
+  async _updateTargetRuntimes() {
+    const { targetRuntimes } = await browser.storage.local.get("targetRuntimes");
+    this._targetRuntimes = targetRuntimes || this._getDefaultTargetRuntimes();
   }
 
   _asFloatVersion(version = false) {
@@ -237,7 +230,7 @@ class Background {
 
   async start() {
     this._compatData = getCompatData();
-    await this._updateTargetBrowsers();
+    await this._updateTargetRuntimes();
 
     browser.runtime.onConnect.addListener(port => {
       // Send result to the popup.
@@ -263,7 +256,7 @@ class Background {
 
     browser.storage.onChanged.addListener(async (changes, area) => {
       if (area === "local") {
-        await this._updateTargetBrowsers();
+        await this._updateTargetRuntimes();
       }
     });
   }
