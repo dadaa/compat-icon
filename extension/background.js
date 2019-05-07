@@ -36,20 +36,32 @@ class Background {
       return;
     }
 
-    const result = new Map();
-
     await browser.tabs.executeScript(tabId, { file: CONTENT_SCRIPT,
                                               runAt: "document_idle" });
+    const issueMap = new Map();
     const styleSheets = await browser.tabs.sendMessage(tabId, {});
     for (const styleSheet of styleSheets) {
       try {
-        for (const { browser, property, support, lineNumber, columnNumber }
-               of (await this._analyze(styleSheet))) {
-          if (!result.has(browser)) {
-            result.set(browser, []);
+        for (const { browser: browserObject,
+                     property,
+                     support,
+                     lineNumber,
+                     columnNumber } of (await this._analyze(styleSheet))) {
+
+          if (!issueMap.has(browserObject)) {
+            issueMap.set(browserObject, {
+              browser: browserObject,
+              issues: [],
+              total: 0,
+            });
           }
-          result.get(browser).push(
-            { property, support, styleSheet, lineNumber, columnNumber });
+
+          const summary = issueMap.get(browserObject);
+          summary.total += 1;
+          if (support !== SUPPORT_STATE.SUPPORTED) {
+            summary.issues.push(
+              { property, support, styleSheet, lineNumber, columnNumber });
+          }
         }
       } catch (e) {
         console.error(
@@ -57,19 +69,16 @@ class Background {
       }
     }
 
+    const result = [...issueMap.values()];
+
     // Find worst performing browser
     let targetBrowser;
     let targetCompatibilityRatio = Number.MAX_VALUE;
-    for (const browser of result.keys()) {
-      const records = result.get(browser);
-      const compatibleCount =
-        records.filter(r => r.support !== SUPPORT_STATE.UNSUPPORTED &&
-                            r.support !== SUPPORT_STATE.UNKNOWN)
-               .length;
-      const compatibilityRatio = compatibleCount / records.length;
-      if (compatibilityRatio < targetCompatibilityRatio) {
-        targetBrowser = browser;
-        targetCompatibilityRatio = compatibilityRatio;
+    for (const { browser: browserObject, issues, total } of result) {
+      const ratio = (total - issues.length) / total;
+      if (ratio < targetCompatibilityRatio) {
+        targetBrowser = browserObject;
+        targetCompatibilityRatio = ratio;
       }
     }
 
