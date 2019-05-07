@@ -12,9 +12,9 @@ class Popup {
     this._onClickIssue = this._onClickIssue.bind(this);
   }
 
-  _onClickBrowser({ browser, records }) {
+  _onClickBrowser({ browserObject, issuesInBrowser }) {
     const issuesMap = new Map();
-    for (const issue of this.getIssues(records)) {
+    for (const issue of issuesInBrowser) {
       const property = issue.property;
       if (!issuesMap.has(property)) {
         issuesMap.set(property, []);
@@ -37,7 +37,7 @@ class Popup {
       });
     }
     const header = {
-      text: `${ browser.brandName } ${ browser.version }`,
+      text: `${ browserObject.brandName } ${ browserObject.version }`,
     };
     this._listComponent.update(header, items);
   }
@@ -79,28 +79,23 @@ class Popup {
     this._listComponent = new ListPanel(document.querySelector("main"));
 
     const items = [];
-    for (const browser of result.keys()) {
-      const records = result.get(browser);
-      const {
-        compatibleCount,
-        compatibilityRatio,
-        status,
-        totalCount,
-      } = this.getCompatibility(records);
+    for (const { browser: browserObject, issues: issuesInBrowser, total } of result) {
+      const { compatibilityRatio, status } =
+        this.getCompatibility(issuesInBrowser, total);
 
       items.push({
         className: "browser",
         dataset: {
-          browser,
-          records,
+          browserObject,
+          issuesInBrowser,
         },
         onClick: this._onClickBrowser,
         hasChild: true,
         icon: `images/${ status }.svg`,
         labels: [
-          `${ browser.brandName } ${ browser.version }`,
+          `${ browserObject.brandName } ${ browserObject.version }`,
           `${ (compatibilityRatio * 100).toFixed(2) }%`,
-          `(${ totalCount - compatibleCount } issues)`,
+          `(${ issuesInBrowser.length } issues)`,
         ],
       });
     }
@@ -109,21 +104,11 @@ class Popup {
     this._result = result;
   }
 
-  getIssues(records) {
-    return records.filter(r => r.support === SUPPORT_STATE.UNSUPPORTED ||
-                               r.support === SUPPORT_STATE.UNKNOWN);
-  }
-
-  getCompatibility(records) {
-    const totalCount = records.length;
-    const compatibleCount =
-      records.filter(r => r.support !== SUPPORT_STATE.UNSUPPORTED &&
-                          r.support !== SUPPORT_STATE.UNKNOWN)
-             .length;
-    const compatibilityRatio = compatibleCount / totalCount;
+  getCompatibility(issues, total) {
+    const compatibilityRatio = (total - issues.length) / total;
     const status =
       compatibilityRatio > 0.9 ? "ok" : compatibilityRatio > 0.6 ? "warning" : "error";
-    return { compatibleCount, compatibilityRatio, status, totalCount };
+    return { compatibilityRatio, status };
   }
 }
 
