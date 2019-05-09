@@ -1,0 +1,6 @@
+{
+  "name": "compat_icon_launcher",
+  "path": "/path/to/launcher.py",
+  "type": "stdio",
+  "allowed_extensions": [ "compat-icon@firefox-dev.tools" ]
+}

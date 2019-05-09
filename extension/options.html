@@ -24,8 +24,17 @@
     }
 
     li {
-      display: flex;
+      display: grid;
+      grid-template-columns: auto 100px 1fr 16px;
       column-gap: 4px;
+    }
+
+    .settings {
+      border: none;
+      background: center / contain no-repeat url(images/settings.svg);
+      cursor: pointer;
+      width: 100%;
+      height: 100;
     }
     </style>
   </head>

@@ -1,14 +1,12 @@
 "use strict";
 
-const { gDevTools } =
-  Components.utils.import("resource://devtools/client/framework/gDevTools.jsm");
-const { Services } =
-  Components.utils.import("resource://gre/modules/Services.jsm");
-const { devtools } =
-  Components.utils.import("resource://devtools/shared/Loader.jsm");
-const TargetFactory = devtools.TargetFactory;
-
 async function getTargetForSelectedTab() {
+  const { Services } =
+    Components.utils.import("resource://gre/modules/Services.jsm");
+  const { devtools } =
+    Components.utils.import("resource://devtools/shared/Loader.jsm");
+  const TargetFactory = devtools.TargetFactory;
+
   const browserWindow = Services.wm.getMostRecentWindow("navigator:browser");
   return await TargetFactory.forTab(browserWindow.gBrowser.selectedTab);
 }
@@ -28,6 +26,9 @@ this.styleEditor = class extends ExtensionAPI {
       experiments: {
         styleEditor: {
           async inspect(styleSheetHref, styleSheetText, lineNumber, columnNumber) {
+            const { gDevTools } =
+              Components.utils.import("resource://devtools/client/framework/gDevTools.jsm");
+
             const target = await getTargetForSelectedTab();
             const toolbox = await gDevTools.showToolbox(target, "styleeditor");
             const styleEditor = toolbox.getPanel("styleeditor").UI;
