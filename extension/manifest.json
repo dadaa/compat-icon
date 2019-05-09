@@ -3,8 +3,14 @@
   "name": "compat-icon",
   "version": "1.0",
   "description": "",
+  "applications": {
+    "gecko": {
+      "id": "compat-icon@firefox-dev.tools"
+    }
+  },
   "permissions": [
     "<all_urls>",
+    "nativeMessaging",
     "storage",
     "tabs"
   ],
@@ -17,6 +23,14 @@
     ]
   },
   "experiment_apis": {
+    "filePicker": {
+      "schema": "experiments/file-picker/schema.json",
+      "parent": {
+        "scopes": ["addon_parent"],
+        "script": "experiments/file-picker/api.js",
+        "paths": [["experiments", "filePicker"]]
+      }
+    },
     "styleEditor": {
       "schema": "experiments/style-editor/schema.json",
       "parent": {
@@ -41,6 +55,7 @@
     "images/error.svg",
     "images/help.svg",
     "images/ok.svg",
+    "images/setting.svg",
     "images/warning.svg"
   ]
 }

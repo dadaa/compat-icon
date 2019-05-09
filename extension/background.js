@@ -32,6 +32,7 @@ class Background {
           [ICON_SIZE]: browser.runtime.getURL("images/icon.svg"),
         },
       });
+      this._url = "";
       this._result = [];
       return;
     }
@@ -93,6 +94,8 @@ class Background {
       },
     });
 
+    const tab = await browser.tabs.get(tabId);
+    this._url = tab.url;
     this._result = result;
   }
 
@@ -234,7 +237,7 @@ class Background {
 
     browser.runtime.onConnect.addListener(port => {
       // Send result to the popup.
-      port.postMessage(this._result);
+      port.postMessage({ url: this._url, result: this._result });
     });
 
     browser.tabs.onActivated.addListener(({ tabId }) => {

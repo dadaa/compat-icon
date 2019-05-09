@@ -1,0 +1,20 @@
+[
+  {
+    "namespace": "experiments.filePicker",
+    "description": "File Picker to get the full path",
+    "functions": [
+      {
+        "name": "pick",
+        "type": "function",
+        "description": "Pick file",
+        "parameters": [
+          {
+            "type": "string",
+            "name": "title"
+          }
+        ],
+        "async": true
+      }
+    ]
+  }
+]

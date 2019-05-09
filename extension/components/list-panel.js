@@ -9,6 +9,7 @@ class ListPanel {
     const sectionEl = document.createElement("section");
 
     if (header) {
+      const { label, actionEl } = header;
       const headerEl = document.createElement("header");
       const previousEl = document.createElement("a");
       previousEl.classList.add("previous");
@@ -19,18 +20,11 @@ class ListPanel {
       headerEl.appendChild(previousEl);
 
       const labelEl = document.createElement("label");
-      labelEl.textContent = header.text;
+      labelEl.textContent = label;
       headerEl.appendChild(labelEl);
 
-      if (header.link) {
-        const linkEl = document.createElement("a");
-        linkEl.classList.add("link");
-        linkEl.href = header.link;
-        linkEl.title = header.link;
-        const imgEl = document.createElement("img");
-        imgEl.src = "images/help.svg";
-        linkEl.appendChild(imgEl);
-        headerEl.appendChild(linkEl);
+      if (actionEl) {
+        headerEl.appendChild(actionEl);
       }
 
       sectionEl.appendChild(headerEl);
