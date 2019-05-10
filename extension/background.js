@@ -155,28 +155,28 @@ class Background {
     return result;
   }
 
-  _getSupport(runtime, value, compatData) {
-    if (!compatData[value]) {
+  _getSupport(runtime, value, compatDataMap) {
+    if (!compatDataMap[value]) {
       return SUPPORT_STATE.UNKNOWN;
     }
 
-    switch (value) {
-      case "align-content":
-      case "align-items":
-      case "align-self":
-      case "justify-content":
-      case "justify-items":
-      case "justify-self": {
-        compatData = compatData[value].flex_context;
+    let compatData;
+
+    for (let field in compatDataMap[value]) {
+      if (field === "__compat") {
+        compatData = compatDataMap[value];
         break;
       }
-      default: {
-        if (!compatData[value].__compat) {
-          return SUPPORT_STATE.UNKNOWN;
-        }
 
-        compatData = compatData[value];
+      // We don't have the way to know the context for now.
+      // Thus, we choose first context if need.
+      if (field.endsWith("_context")) {
+        compatData = compatDataMap[value][field];
       }
+    }
+
+    if (!compatData.__compat) {
+      return SUPPORT_STATE.UNKNOWN;
     }
 
     const runtimeVersion = parseFloat(runtime.version);
